@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}EditMatch{% endblock %} | EditMatch</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container nav-row">
+      <a href="{{ url_for('index') }}" class="logo">Edit<span>Match</span></a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('browse_editors') }}">Browse Editors</a>
+        {% if current_user %}
+          <a href="{{ dashboard_url }}">Dashboard</a>
+          <form method="post" action="{{ url_for('logout') }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="link-button">Logout</button>
+          </form>
+        {% else %}
+          <a href="{{ url_for('register', type='editor') }}">Be an Editor</a>
+          <a href="{{ url_for('register', type='client') }}">Hire an Editor</a>
+          <a href="{{ url_for('login') }}">Login</a>
+          <a class="btn btn-small" href="{{ url_for('register') }}">Get Started</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}" role="status">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('browse_editors') }}">Browse Editors</a>
+        <a href="{{ url_for('register', type='editor') }}">Be an Editor</a>
+        <a href="{{ url_for('register', type='client') }}">Hire an Editor</a>
+        <a href="{{ url_for('login') }}">Login</a>
+      </nav>
+      <p class="muted small">EditMatch is a student hackathon prototype. Editor scores show how well saved information fits a request. They do not measure artistic quality.</p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+</body>
+</html>

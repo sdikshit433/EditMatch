@@ -1,0 +1,39 @@
+{# Small reusable pieces of HTML. Import them with: {% from "_macros.html" import ... with context %} #}
+
+{% macro status_badge(status) -%}
+  <span class="badge badge-{{ status|lower|replace(' ', '-') }}">{{ status }}</span>
+{%- endmacro %}
+
+{% macro tag_list(items) -%}
+  <div class="tag-list">
+    {% for item in items %}<span class="tag">{{ item }}</span>{% else %}<span class="muted small">Not stated</span>{% endfor %}
+  </div>
+{%- endmacro %}
+
+{% macro price_text(minimum, maximum) -%}
+  {% if minimum is not none and maximum is not none %}₹{{ '{:,}'.format(minimum) }} to ₹{{ '{:,}'.format(maximum) }}
+  {%- elif minimum is not none %}From ₹{{ '{:,}'.format(minimum) }}
+  {%- elif maximum is not none %}Up to ₹{{ '{:,}'.format(maximum) }}
+  {%- else %}Price not stated{% endif %}
+{%- endmacro %}
+
+{% macro invite_form(profile_id, jobs, return_to, label="Invite to Project") -%}
+  {% if current_user and current_user.role == 'client' %}
+    {% if jobs %}
+      <form method="post" action="{{ url_for('send_invitation') }}" class="invite-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="editor_id" value="{{ profile_id }}">
+        <input type="hidden" name="return_to" value="{{ return_to }}">
+        <label class="sr-only" for="job-{{ profile_id }}">Choose a project</label>
+        <select id="job-{{ profile_id }}" name="job_id" required>
+          {% for job in jobs %}<option value="{{ job.id }}">{{ job.title }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-small" data-loading-text="Sending...">{{ label }}</button>
+      </form>
+    {% else %}
+      <a class="btn btn-secondary btn-small" href="{{ url_for('hire_editor') }}">Create a project first</a>
+    {% endif %}
+  {% elif not current_user %}
+    <a class="btn btn-secondary btn-small" href="{{ url_for('login') }}">Log in as a client to invite</a>
+  {% endif %}
+{%- endmacro %}

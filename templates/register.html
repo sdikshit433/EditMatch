@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Create Account{% endblock %}
+{% block content %}
+<div class="auth-box card">
+  <h1>Create your account</h1>
+  <p class="muted">Choose the account type that fits you best.</p>
+
+  {% if errors %}
+    <div class="error-box" role="alert">
+      <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('register') }}" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <fieldset class="field">
+      <legend class="field-label required">I am a</legend>
+      <div class="choice-group">
+        <label class="chip"><input type="radio" name="role" value="editor" {% if values.get('role') == 'editor' %}checked{% endif %} required> Video editor</label>
+        <label class="chip"><input type="radio" name="role" value="client" {% if values.get('role') == 'client' %}checked{% endif %} required> Client who needs an editor</label>
+      </div>
+    </fieldset>
+
+    <div class="field">
+      <label for="full_name" class="required">Full name</label>
+      <input id="full_name" name="full_name" type="text" maxlength="100" value="{{ values.get('full_name', '') }}" required autocomplete="name">
+    </div>
+    <div class="field">
+      <label for="email" class="required">Email</label>
+      <input id="email" name="email" type="email" maxlength="254" value="{{ values.get('email', '') }}" required autocomplete="email">
+    </div>
+    <div class="field">
+      <label for="password" class="required">Password</label>
+      <p class="field-help">At least 8 characters, with one letter and one number.</p>
+      <input id="password" name="password" type="password" required autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="confirm_password" class="required">Confirm password</label>
+      <input id="confirm_password" name="confirm_password" type="password" required autocomplete="new-password">
+    </div>
+
+    <button type="submit" class="btn btn-large" data-loading-text="Creating account...">Create Account</button>
+  </form>
+  <p class="small muted" style="margin-top:16px">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+</div>
+{% endblock %}

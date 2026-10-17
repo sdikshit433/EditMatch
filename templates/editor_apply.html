@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Profile' if is_edit else 'Create Editor Profile' }}{% endblock %}
+{% block content %}
+
+<div class="page-heading">
+  <div>
+    <h1>{{ 'Edit your editor profile' if is_edit else 'Create your editor profile' }}</h1>
+    <p class="muted">Fields marked * are required. Everything else helps clients find you.</p>
+  </div>
+  {% if is_edit %}<a class="btn btn-secondary btn-small" href="{{ url_for('editor_dashboard') }}">Back to dashboard</a>{% endif %}
+</div>
+
+{% if errors %}
+  <div class="error-box" role="alert">
+    <strong>Please fix these problems:</strong>
+    <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<nav class="notice small" aria-label="Form sections">
+  Sections: <a href="#s1">Personal</a> · <a href="#s2">Specialities</a> · <a href="#s3">Portfolio samples</a> · <a href="#s4">Pricing</a> · <a href="#s5">Contact</a> · <a href="#s6">Public portfolio</a>
+</nav>
+
+<form method="post" action="{{ form_action }}" enctype="multipart/form-data" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <!-- Section 1 -->
+  <fieldset class="form-section" id="s1">
+    <legend>1. Personal information</legend>
+    <div class="form-grid">
+      <div class="field">
+        <label for="full_name" class="required">Full name</label>
+        <input id="full_name" name="full_name" type="text" maxlength="100" value="{{ values.get('full_name', '') }}" required>
+      </div>
+      <div class="field">
+        <label for="profile_photo">Profile photograph <span class="optional">(optional)</span></label>
+        <input id="profile_photo" name="profile_photo" type="file" accept="image/jpeg,image/png,image/webp">
+        <p class="field-help">JPG, PNG or WebP, up to {{ photo_limit_mb }} MB.</p>
+        <p class="file-names" id="profile_photo-names"></p>
+        {% if profile and profile.profile_photo %}<p class="current-file">Current photo saved. Choose a file to replace it.</p>{% endif %}
+      </div>
+    </div>
+    <div class="field">
+      <label for="bio" class="required">Short bio</label>
+      <textarea id="bio" name="bio" maxlength="1000" required>{{ values.get('bio', '') }}</textarea>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="city">City or location <span class="optional">(optional)</span></label>
+        <input id="city" name="city" type="text" maxlength="100" value="{{ values.get('city', '') }}">
+      </div>
+      <div class="field">
+        <label for="experience_level" class="required">Experience level</label>
+        <select id="experience_level" name="experience_level" required>
+          <option value="">Choose...</option>
+          {% for option in experience_options %}
+            <option value="{{ option }}" {% if values.get('experience_level') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+        <p class="field-help">This is what you say about yourself. It is not a verified qualification.</p>
+      </div>
+      <div class="field">
+        <label for="languages">Preferred language <span class="optional">(optional)</span></label>
+        <input id="languages" name="languages" type="text" maxlength="100" value="{{ values.get('languages', '') }}" placeholder="for example English, Hindi">
+      </div>
+      <div class="field">
+        <label for="availability" class="required">Editing availability</label>
+        <select id="availability" name="availability" required>
+          {% for option in availability_options %}
+            <option value="{{ option }}" {% if values.get('availability') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="preferred_contact">Preferred contact method</label>
+        <select id="preferred_contact" name="preferred_contact">
+          <option value="">Choose...</option>
+          {% for option in contact_options %}
+            <option value="{{ option }}" {% if values.get('preferred_contact') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- Section 2 -->
+  <fieldset class="form-section" id="s2">
+    <legend>2. Editing specialities</legend>
+    <p class="field-help">Tick everything that applies.</p>
+    <div class="field">
+      <span class="field-label required">Categories</span>
+      <div class="choice-group">
+        {% for option in category_options %}
+          <label class="chip"><input type="checkbox" name="categories" value="{{ option }}" {% if option in values.get('categories', []) %}checked{% endif %}> {{ option }}</label>
+        {% endfor %}
+      </div>
+      <label for="other_category" class="small">Other category <span class="optional">(comma-separated)</span></label>
+      <input id="other_category" name="other_category" type="text" maxlength="200" value="{{ values.get('other_category', '') }}">
+    </div>
+    <div class="field">
+      <span class="field-label">Games</span>
+      <div class="choice-group">
+        {% for option in game_options %}
+          <label class="chip"><input type="checkbox" name="games" value="{{ option }}" {% if option in values.get('games', []) %}checked{% endif %}> {{ option }}</label>
+        {% endfor %}
+      </div>
+      <label for="other_games" class="small">Other games <span class="optional">(comma-separated)</span></label>
+      <input id="other_games" name="other_games" type="text" maxlength="200" value="{{ values.get('other_games', '') }}" placeholder="for example Rocket League">
+    </div>
+    <div class="field">
+      <span class="field-label">Editing techniques and effects</span>
+      <div class="choice-group">
+        {% for option in technique_options %}
+          <label class="chip"><input type="checkbox" name="skill_tags" value="{{ option }}" {% if option in values.get('skill_tags', []) %}checked{% endif %}> {{ option }}</label>
+        {% endfor %}
+      </div>
+      <label for="other_technique" class="small">Other technique <span class="optional">(comma-separated)</span></label>
+      <input id="other_technique" name="other_technique" type="text" maxlength="200" value="{{ values.get('other_technique', '') }}">
+    </div>
+  </fieldset>
+
+  <!-- Section 3 -->
+  <fieldset class="form-section" id="s3">
+    <legend>3. Portfolio samples (up to {{ max_samples }})</legend>
+    <p class="field-help">Each sample needs a title, a category, and either a video file or a public video link. You can save with fewer than five samples and add more later. Browsers can only play some video codecs. MP4 (H.264) plays most reliably. Videos up to {{ video_limit_mb }} MB.</p>
+
+    {% for i in range(1, max_samples + 1) %}
+      <div class="sample-slot">
+        <h3>Sample {{ i }}</h3>
+        <input type="hidden" name="sample_{{ i }}_id" value="{{ values.get('sample_' ~ i ~ '_id', '') }}">
+        <div class="form-grid">
+          <div class="field">
+            <label for="s{{ i }}-title">Sample title</label>
+            <input id="s{{ i }}-title" name="sample_{{ i }}_title" type="text" maxlength="120" value="{{ values.get('sample_' ~ i ~ '_title', '') }}">
+          </div>
+          <div class="field">
+            <label for="s{{ i }}-category">Video category</label>
+            <select id="s{{ i }}-category" name="sample_{{ i }}_category">
+              <option value="">Choose...</option>
+              {% for option in category_options %}
+                <option value="{{ option }}" {% if values.get('sample_' ~ i ~ '_category') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="s{{ i }}-game">Game <span class="optional">(if relevant)</span></label>
+            <input id="s{{ i }}-game" name="sample_{{ i }}_game" type="text" maxlength="60" list="game-suggestions" value="{{ values.get('sample_' ~ i ~ '_game', '') }}">
+          </div>
+          <div class="field">
+            <label for="s{{ i }}-software">Software used <span class="optional">(optional)</span></label>
+            <input id="s{{ i }}-software" name="sample_{{ i }}_software" type="text" maxlength="100" value="{{ values.get('sample_' ~ i ~ '_software', '') }}" placeholder="for example Premiere Pro">
+          </div>
+        </div>
+        <div class="field">
+          <label for="s{{ i }}-description">Short description</label>
+          <textarea id="s{{ i }}-description" name="sample_{{ i }}_description" maxlength="600">{{ values.get('sample_' ~ i ~ '_description', '') }}</textarea>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="s{{ i }}-video">Video file <span class="optional">(MP4, WebM or MOV)</span></label>
+            <input id="s{{ i }}-video" name="sample_{{ i }}_video" type="file" accept="video/mp4,video/webm,video/quicktime">
+            <p class="file-names" id="s{{ i }}-video-names"></p>
+            {% if values.get('sample_' ~ i ~ '_uploaded') %}<p class="current-file">A video is saved for this sample. Upload a file or link to replace it.</p>{% endif %}
+          </div>
+          <div class="field">
+            <label for="s{{ i }}-url">Or a public video link <span class="optional">(YouTube, Vimeo, etc.)</span></label>
+            <input id="s{{ i }}-url" name="sample_{{ i }}_video_url" type="url" maxlength="300" value="{{ values.get('sample_' ~ i ~ '_video_url', '') }}" placeholder="https://">
+            <p class="field-help">We link to the video. We do not download it.</p>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Techniques used</span>
+          <div class="choice-group">
+            {% for option in technique_options %}
+              <label class="chip"><input type="checkbox" name="sample_{{ i }}_techniques" value="{{ option }}" {% if option in values.get('sample_' ~ i ~ '_techniques', []) %}checked{% endif %}> {{ option }}</label>
+            {% endfor %}
+          </div>
+        </div>
+        {% if values.get('sample_' ~ i ~ '_id') %}
+          <label class="inline-check"><input type="checkbox" name="sample_{{ i }}_remove" value="1"> Remove this sample</label>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <datalist id="game-suggestions">
+      {% for option in game_options %}<option value="{{ option }}"></option>{% endfor %}
+    </datalist>
+  </fieldset>
+
+  <!-- Section 4 -->
+  <fieldset class="form-section" id="s4">
+    <legend>4. Pricing</legend>
+    <div class="form-grid">
+      <div class="field">
+        <label for="pricing_model" class="required">Pricing model</label>
+        <select id="pricing_model" name="pricing_model" required>
+          <option value="">Choose...</option>
+          {% for option in pricing_options %}
+            <option value="{{ option }}" {% if values.get('pricing_model') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="delivery_hours">Typical delivery time</label>
+        <select id="delivery_hours" name="delivery_hours">
+          <option value="">Not sure</option>
+          {% for label, hours in delivery_options.items() %}
+            <option value="{{ hours }}" {% if values.get('delivery_hours') == hours %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="minimum_price">Minimum price (₹)</label>
+        <input id="minimum_price" name="minimum_price" type="number" min="0" step="1" value="{{ values.get('minimum_price') or '' }}">
+      </div>
+      <div class="field">
+        <label for="maximum_price">Maximum price (₹)</label>
+        <input id="maximum_price" name="maximum_price" type="number" min="0" step="1" value="{{ values.get('maximum_price') or '' }}">
+      </div>
+    </div>
+    <label class="inline-check"><input type="checkbox" name="price_negotiable" value="1" {% if values.get('price_negotiable') %}checked{% endif %}> My price is negotiable</label>
+  </fieldset>
+
+  <!-- Section 5 -->
+  <fieldset class="form-section" id="s5">
+    <legend>5. Contact information</legend>
+    <p class="field-help">Your email stays private. Clients see it only after you accept one of their invitations.</p>
+    <div class="form-grid">
+      <div class="field">
+        <label for="contact_email" class="required">Contact email</label>
+        <input id="contact_email" name="contact_email" type="email" maxlength="254" value="{{ values.get('contact_email', '') }}" required>
+      </div>
+      <div class="field">
+        <label for="social_link">Instagram or social link <span class="optional">(optional)</span></label>
+        <input id="social_link" name="social_link" type="url" maxlength="300" value="{{ values.get('social_link', '') }}" placeholder="https://">
+      </div>
+      <div class="field">
+        <label for="youtube_link">YouTube channel <span class="optional">(optional)</span></label>
+        <input id="youtube_link" name="youtube_link" type="url" maxlength="300" value="{{ values.get('youtube_link', '') }}" placeholder="https://">
+      </div>
+      <div class="field">
+        <label for="portfolio_website">Portfolio website <span class="optional">(optional)</span></label>
+        <input id="portfolio_website" name="portfolio_website" type="url" maxlength="300" value="{{ values.get('portfolio_website', '') }}" placeholder="https://">
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- Section 6 -->
+  <fieldset class="form-section" id="s6">
+    <legend>6. Public portfolio analysis</legend>
+    <div class="field">
+      <label for="portfolio_url">Public portfolio URL <span class="optional">(optional)</span></label>
+      <input id="portfolio_url" name="portfolio_url" type="url" maxlength="300" value="{{ values.get('portfolio_url', '') }}" placeholder="https://">
+      <p class="field-help">A personal site, a public Behance or Vimeo page, or another public portfolio page. TinyFish reads only what is visible on that public page. Leave it blank if you do not have one.</p>
+    </div>
+    <p class="field-help">Information from this page is kept separate from what you typed in, and it is labelled on your profile.</p>
+    <div class="button-row">
+      <button type="submit" name="action" value="analyse" class="btn btn-secondary" data-loading-text="TinyFish is inspecting the public portfolio...">Analyse Public Portfolio with TinyFish</button>
+    </div>
+    {% if not tinyfish_configured %}
+      <p class="field-help" style="margin-top:10px">TinyFish is not configured on this computer, so this button will save your profile without analysing the page.</p>
+    {% endif %}
+  </fieldset>
+
+  <div class="button-row">
+    <button type="submit" name="action" value="save" class="btn btn-large" data-loading-text="Saving profile...">{{ 'Save Changes' if is_edit else 'Create My Profile' }}</button>
+    <a class="btn btn-secondary" href="{{ url_for('editor_dashboard') if is_edit else url_for('index') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

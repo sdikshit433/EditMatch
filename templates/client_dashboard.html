@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, price_text with context %}
+{% block title %}Client Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-heading">
+  <div>
+    <h1>Welcome, {{ current_user.full_name }}</h1>
+    <p class="muted">Your video projects and the editors you have invited.</p>
+  </div>
+  <a class="btn" href="{{ url_for('hire_editor') }}">Create New Project</a>
+</div>
+
+<div class="card">
+  <div class="stats-row">
+    <div class="stat"><strong>{{ jobs|length }}</strong>Projects</div>
+    <div class="stat"><strong>{{ jobs|sum(attribute='match_count') }}</strong>Editor matches</div>
+    <div class="stat"><strong>{{ jobs|sum(attribute='invite_count') }}</strong>Invitations sent</div>
+    <div class="stat"><strong>{{ jobs|sum(attribute='accepted_count') }}</strong>Accepted</div>
+  </div>
+</div>
+
+<section>
+  <h2>Your projects</h2>
+  {% if jobs %}
+    <div class="table-wrap">
+      <table class="simple">
+        <thead>
+          <tr><th>Project</th><th>Budget</th><th>Status</th><th>Matches</th><th>Invited</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+            <tr>
+              <td><strong>{{ job.title }}</strong><br><span class="small muted">{{ job.category or 'Category not stated' }}{% if job.game %} · {{ job.game }}{% endif %}</span></td>
+              <td class="small">{{ price_text(job.minimum_budget, job.maximum_budget) }}</td>
+              <td>{{ status_badge(job.status) }}</td>
+              <td>{{ job.match_count }}</td>
+              <td>{{ job.invite_count }}{% if job.accepted_count %} <span class="small muted">({{ job.accepted_count }} accepted)</span>{% endif %}</td>
+              <td>
+                <div class="button-row">
+                  <a class="btn btn-small" href="{{ url_for('job_matches', job_id=job.id) }}">View matches</a>
+                  {% if job.status not in ['Completed', 'Cancelled'] %}
+                    <form method="post" action="{{ url_for('update_job_status', job_id=job.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" name="status" value="Completed" class="btn btn-secondary btn-small">Mark completed</button>
+                    </form>
+                    <form method="post" action="{{ url_for('update_job_status', job_id=job.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" name="status" value="Cancelled" class="btn btn-secondary btn-small">Cancel</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h3>No projects yet</h3>
+      <p class="muted">Describe your video and we will suggest editors who fit it.</p>
+      <a class="btn" href="{{ url_for('hire_editor') }}">Find My Editor</a>
+    </div>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Recent activity</h2>
+  {% if activity %}
+    <ul class="list-plain">
+      {% for item in activity %}
+        <li class="small">
+          <strong>{{ item.editor_name }}</strong> — {{ item.title }}: {{ status_badge(item.status) }}
+          {% if item.status == 'Accepted' and item.contact_email %} · Contact: <a href="mailto:{{ item.contact_email }}">{{ item.contact_email }}</a>{% endif %}
+          <span class="muted">({{ item.updated_at[:16] }})</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted small">No invitations have been sent yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

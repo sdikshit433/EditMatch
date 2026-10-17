@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tag_list, price_text, invite_form with context %}
+{% block title %}{{ profile.full_name }}{% endblock %}
+{% block content %}
+
+{% if profile.is_demo %}
+  <div class="notice notice-warning small"><strong>Demo profile.</strong> This is a fictional example for demonstration. It is not a real person.</div>
+{% endif %}
+
+<div class="page-heading">
+  <div class="editor-head">
+    {% if profile.profile_photo %}
+      <img class="avatar-large" src="{{ url_for('static', filename=profile.profile_photo) }}" alt="Photograph of {{ profile.full_name }}">
+    {% else %}
+      <div class="avatar-large" aria-hidden="true">{{ profile.full_name[0] }}</div>
+    {% endif %}
+    <div>
+      <h1 style="margin-bottom:4px">{{ profile.full_name }}</h1>
+      <p class="muted" style="margin:0">{{ profile.experience_level or 'Experience not stated' }}{% if profile.city %} · {{ profile.city }}{% endif %}</p>
+      <p class="small" style="margin:6px 0 0"><strong>Availability:</strong> {{ profile.availability or 'Not stated' }} · <strong>Profile completion:</strong> {{ completion }}%</p>
+    </div>
+  </div>
+  {% if is_owner %}<a class="btn" href="{{ url_for('editor_edit') }}">Edit Profile</a>{% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>About</h2>
+    <p>{{ profile.bio or 'No bio yet.' }}</p>
+    <dl class="requirement-list">
+      <div><dt>Categories</dt><dd>{{ tag_list(profile.category_list) }}</dd></div>
+      <div><dt>Games</dt><dd>{{ tag_list(profile.game_list) }}</dd></div>
+      <div><dt>Techniques and effects</dt><dd>{{ tag_list(profile.skill_list) }}</dd></div>
+      <div><dt>Pricing</dt><dd class="price">{{ price_text(profile.minimum_price, profile.maximum_price) }}{% if profile.price_negotiable %} · negotiable{% endif %}</dd></div>
+      <div><dt>Pricing model</dt><dd>{{ profile.pricing_model or 'Not stated' }}</dd></div>
+      <div><dt>Typical delivery</dt><dd>{% if profile.delivery_hours %}{{ profile.delivery_hours }} hours{% else %}Not stated{% endif %}</dd></div>
+      <div><dt>Languages</dt><dd>{{ profile.languages or 'Not stated' }}</dd></div>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>Contact and links</h2>
+    {% if show_contact %}
+      <dl class="requirement-list">
+        <div><dt>Email</dt><dd><a href="mailto:{{ profile.contact_email }}">{{ profile.contact_email }}</a></dd></div>
+        {% if profile.preferred_contact %}<div><dt>Preferred contact</dt><dd>{{ profile.preferred_contact }}</dd></div>{% endif %}
+      </dl>
+    {% else %}
+      <p class="small muted">Contact details are private. They become visible to a client after the editor accepts that client's invitation.</p>
+    {% endif %}
+    <ul class="list-plain small">
+      {% if profile.portfolio_url %}<li>Public portfolio: <a href="{{ profile.portfolio_url }}" rel="noopener noreferrer" target="_blank">{{ profile.portfolio_url }}</a></li>{% endif %}
+      {% if profile.portfolio_website %}<li>Website: <a href="{{ profile.portfolio_website }}" rel="noopener noreferrer" target="_blank">{{ profile.portfolio_website }}</a></li>{% endif %}
+      {% if profile.youtube_link %}<li>YouTube: <a href="{{ profile.youtube_link }}" rel="noopener noreferrer" target="_blank">{{ profile.youtube_link }}</a></li>{% endif %}
+      {% if profile.social_link %}<li>Social: <a href="{{ profile.social_link }}" rel="noopener noreferrer" target="_blank">{{ profile.social_link }}</a></li>{% endif %}
+    </ul>
+    {% if not is_owner %}
+      <div style="margin-top:14px">{{ invite_form(profile.id, client_jobs, url_for('editor_profile', profile_id=profile.id)) }}</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if profile.analysis and profile.tinyfish_analysis_status == 'completed' %}
+  <section style="margin-top:24px">
+    <h2>Public portfolio information</h2>
+    <div class="notice small">Extracted by TinyFish from a public page. This is listed as <strong>information found on the page</strong>. EditMatch has not verified it, and it says nothing about editing quality.</div>
+    <dl class="requirement-list">
+      {% if profile.analysis.project_titles %}<div><dt>Project titles on the page</dt><dd>{{ profile.analysis.project_titles|join(', ') }}</dd></div>{% endif %}
+      {% if profile.analysis.categories %}<div><dt>Categories stated</dt><dd>{{ profile.analysis.categories|join(', ') }}</dd></div>{% endif %}
+      {% if profile.analysis.techniques %}<div><dt>Techniques mentioned</dt><dd>{{ profile.analysis.techniques|join(', ') }}</dd></div>{% endif %}
+      {% if profile.analysis.price_information %}<div><dt>Public pricing</dt><dd>{{ profile.analysis.price_information }}</dd></div>{% endif %}
+    </dl>
+  </section>
+{% endif %}
+
+<section style="margin-top:24px">
+  <h2>Portfolio samples</h2>
+  {% if profile.samples %}
+    <div class="grid-2">
+      {% for sample in profile.samples %}
+        <article class="card sample-card">
+          <h3>{{ sample.title }}</h3>
+          <p class="small muted">{{ sample.category }}{% if sample.game %} · {{ sample.game }}{% endif %}{% if sample.software_used %} · {{ sample.software_used }}{% endif %}</p>
+          {% if sample.uploaded_video_path %}
+            <video controls preload="metadata" src="{{ url_for('static', filename=sample.uploaded_video_path) }}">Your browser cannot play this video format. Try an MP4 file.</video>
+          {% elif sample.external_video_url %}
+            <a class="btn btn-secondary btn-small" href="{{ sample.external_video_url }}" rel="noopener noreferrer" target="_blank">Watch Sample</a>
+          {% else %}
+            <p class="small muted">No video attached.</p>
+          {% endif %}
+          <p class="small">{{ sample.description }}</p>
+          <p class="small"><strong>Techniques used:</strong></p>
+          {{ tag_list(sample.tag_list) }}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state"><p>This editor has not added any samples yet.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

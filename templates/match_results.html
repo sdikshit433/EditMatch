@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tag_list, price_text, invite_form, status_badge with context %}
+{% block title %}Matches for {{ job.title }}{% endblock %}
+{% block content %}
+
+{% set labels = {
+  'category_and_game': 'Category and game',
+  'effects_and_techniques': 'Effects and techniques',
+  'budget': 'Budget',
+  'deadline': 'Deadline',
+  'portfolio_evidence': 'Portfolio evidence',
+  'availability': 'Availability'
+} %}
+
+<div class="page-heading">
+  <div>
+    <h1>Here are the editors who best match your project.</h1>
+    <p class="muted">{{ job.title }} · {{ total_editors }} editor{{ '' if total_editors == 1 else 's' }} checked · {{ status_badge(job.status) }}</p>
+  </div>
+  <a class="btn btn-secondary btn-small" href="{{ url_for('client_dashboard') }}">Back to dashboard</a>
+</div>
+
+<div class="card card-soft">
+  <h2>What we understood from your request</h2>
+  <dl class="requirement-list">
+    {% for field, label in [('game','Game'), ('category','Category'), ('platform','Platform'), ('effects','Editing styles and effects'), ('duration_seconds','Finished length (seconds)'), ('budget_min','Minimum budget'), ('budget_max','Maximum budget'), ('aspect_ratio','Aspect ratio'), ('voiceover','Voiceover'), ('subtitles','Subtitles'), ('delivery_hours','Delivery time (hours)')] %}
+      {% set value = requirements['values'].get(field) %}
+      <div>
+        <dt>{{ label }}</dt>
+        <dd>
+          {% if value is iterable and value is not string %}
+            {{ value|join(', ') if value else 'Not specified' }}
+          {% elif value is not none and value != '' %}
+            {% if field in ['budget_min','budget_max'] %}₹{{ '{:,}'.format(value) }}{% else %}{{ value }}{% endif %}
+          {% else %}
+            Not specified
+          {% endif %}
+          <span class="small muted">· {{ requirements['sources'].get(field, '') }}</span>
+        </dd>
+      </div>
+    {% endfor %}
+  </dl>
+  {% for conflict in requirements['conflicts'] %}
+    <p class="notice notice-warning small" style="margin-top:12px">{{ conflict }}</p>
+  {% endfor %}
+  {% if job.deadline %}<p class="small"><strong>Deadline:</strong> {{ job.deadline }}</p>{% endif %}
+  {% if job.reference_url %}
+    <div class="notice small" style="margin-top:12px">
+      <strong>Reference link:</strong> <a href="{{ job.reference_url }}" rel="noopener noreferrer" target="_blank">{{ job.reference_url }}</a><br>
+      {{ tinyfish_labels.get(job.reference_analysis_status, job.reference_analysis_status) }}
+      {% if reference and reference.reference_title %}<br>Title on the page: {{ reference.reference_title }}{% endif %}
+      {% if reference and reference.visible_description %}<br>Description on the page: {{ reference.visible_description }}{% endif %}
+      {% if reference and reference.limitations %}<br><span class="muted">Limits: {{ reference.limitations|join('; ') }}</span>{% endif %}
+    </div>
+  {% endif %}
+</div>
+
+{% if show_fallback %}
+  <div class="notice notice-warning" role="status">
+    <strong>No strong matches were found.</strong> Below are the closest available editors and their limitations. Try a higher budget, a later deadline, or different effects.
+  </div>
+{% endif %}
+
+{% if not shown %}
+  <div class="empty-state">
+    <h2>No editors have profiles yet</h2>
+    <p class="muted">Ask editors to create their profiles, then try again.</p>
+  </div>
+{% endif %}
+
+{% for item in shown %}
+  {% set editor = item.editor %}
+  {% set profile = editor.profile %}
+  {% set result = item.result %}
+  <article class="card match-card">
+    <div class="match-header">
+      <div class="editor-head">
+        {% if profile.profile_photo %}
+          <img class="avatar" src="{{ url_for('static', filename=profile.profile_photo) }}" alt="">
+        {% else %}
+          <div class="avatar" aria-hidden="true">{{ profile.full_name[0] }}</div>
+        {% endif %}
+        <div>
+          <h2 style="margin-bottom:2px">{{ profile.full_name }}</h2>
+          {% if profile.is_demo %}<span class="badge badge-demo">Demo profile</span>{% endif %}
+          <p class="small muted" style="margin:4px 0 0">{{ price_text(profile.minimum_price, profile.maximum_price) }} · {{ profile.availability or 'Availability not stated' }}</p>
+        </div>
+      </div>
+      <div class="score-badge" aria-label="Compatibility score {{ result.score }} out of 100">
+        <strong>{{ result.score }}%</strong>
+        <span class="small">compatibility</span>
+      </div>
+    </div>
+
+    <p style="margin-top:14px"><strong>{{ item.explanation.label }}.</strong> {{ item.explanation.summary }}</p>
+
+    <div class="grid-2">
+      <div>
+        <h3>Why this editor matches</h3>
+        {% if item.explanation.strengths %}
+          <ul class="list-plain list-good small">{% for s in item.explanation.strengths %}<li>{{ s }}</li>{% endfor %}</ul>
+        {% else %}
+          <p class="small muted">No clear overlap with your request was found.</p>
+        {% endif %}
+      </div>
+      <div>
+        <h3>Limitations and unknowns</h3>
+        {% if item.explanation.mismatches or item.explanation.unknowns %}
+          <ul class="list-plain list-bad small">
+            {% for m in item.explanation.mismatches %}<li>{{ m }}</li>{% endfor %}
+            {% for u in item.explanation.unknowns %}<li class="muted">Unknown: {{ u }}</li>{% endfor %}
+          </ul>
+        {% else %}
+          <p class="small muted">Nothing important is missing.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <details style="margin-top:12px">
+      <summary class="small"><strong>How this score was calculated</strong></summary>
+      <table class="match-points">
+        <thead><tr><th>Part</th><th>Points</th></tr></thead>
+        <tbody>
+          {% for key, label in labels.items() %}
+            <tr><td>{{ label }}</td><td>{{ result.points.get(key, 0) }} / {{ {'category_and_game':30,'effects_and_techniques':25,'budget':20,'deadline':10,'portfolio_evidence':10,'availability':5}[key] }}</td></tr>
+          {% endfor %}
+          {% if result.penalties %}
+            <tr><td>Budget mismatch penalty</td><td>−{{ result.penalties.get('budget_mismatch', 0) }}</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+      <p class="small muted" style="margin-top:8px">The weights are set in matching_service.py. This is a transparent points system, not a measure of editing quality.</p>
+    </details>
+
+    <div>
+      <h3 style="margin-top:12px">Relevant samples</h3>
+      {% if profile.samples %}
+        <ul class="list-plain small">
+          {% for sample in profile.samples[:3] %}<li>{{ sample.title }} <span class="muted">({{ sample.category }}{% if sample.game %}, {{ sample.game }}{% endif %})</span></li>{% endfor %}
+        </ul>
+      {% else %}
+        <p class="small muted">No samples uploaded yet.</p>
+      {% endif %}
+      {% if profile.analysis and profile.tinyfish_analysis_status == 'completed' %}
+        <p class="small muted">Public portfolio page information was used as extra evidence. It was extracted by TinyFish and is not verified.</p>
+      {% endif %}
+    </div>
+
+    <div class="button-row" style="margin-top:14px">
+      <a class="btn btn-secondary btn-small" href="{{ url_for('editor_profile', profile_id=profile.id) }}">View Profile</a>
+      {% if editor.id in invited_ids %}
+        <span class="badge badge-pending">Invitation pending</span>
+      {% else %}
+        {{ invite_form(profile.id, [job], url_for('job_matches', job_id=job.id), "Invite Editor") }}
+      {% endif %}
+    </div>
+  </article>
+{% endfor %}
+{% endblock %}

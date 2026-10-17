@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge with context %}
+{% block title %}Find a Video Editor{% endblock %}
+{% block content %}
+
+
+<section class="hero">
+    <video class="hero-video" autoplay muted loop playsinline>
+        <source src="{{ url_for('static', filename='videos/hero.mp4') }}" type="video/mp4">
+    </video>
+
+    <div class="hero-content">
+        <h1>
+            Connect. Create.
+            <span class="gradient-text"> Grow.</span>
+        </h1>
+
+        <p class="hero-lead">
+            Find your perfect editing partner. Bring your vision to life.
+        </p>
+        
+    </div>
+</section>
+
+
+
+<section>
+  <div class="grid-2">
+    <div class="card choice-card">
+      <h2>Be an Editor</h2>
+      <p>Showcase your best edits, build your profile, and get invited to projects.</p>
+      <div><a class="btn btn-large" href="{{ url_for('register', type='editor') }}">Create Editor Profile</a></div>
+    </div>
+    <div class="card choice-card">
+      <h2>Hire an Editor</h2>
+      <p>Tell us what you want to create and discover editors who match your project.</p>
+      <div><a class="btn btn-large" href="{{ url_for('register', type='client') }}">Find My Editor</a></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>How EditMatch Works</h2>
+  <div class="grid-2">
+    
+    <!-- FOR EDITORS -->
+    <div class="card">
+      <h3>For Editors</h3>
+      <ol class="step-list">
+        <li>Create your profile with your details, pricing, and availability.</li>
+        <li>Upload up to 5 portfolio videos to showcase your style.</li>
+        <li><strong>TinyFish AI</strong> analyzes your editing style, pacing, and visual effects to build your smart skill profile.</li>
+        <li>Receive high-intent client invitations tailored specifically to your strengths.</li>
+      </ol>
+    </div>
+
+    <!-- FOR CLIENTS -->
+    <div class="card">
+      <h3>For Clients</h3>
+      <ol class="step-list">
+        <li>Fill out a quick form describing your project, budget, and desired editing style.</li>
+        <li>Our <strong>TinyFish AI Agent</strong> processes your requirements and extracts key editing preferences.</li>
+        <li>Get matched with the top editors on our platform whose proven style perfectly fits your vision.</li>
+        <li>Review your AI-matched editors and send instant project invitations.</li>
+      </ol>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2>Editing Categories</h2>
+  <div class="tag-list">
+    {% for name in ["Gaming", "YouTube videos", "Instagram Reels", "YouTube Shorts", "Cinematic videos", "Anime/AMV", "Podcast editing", "Wedding editing", "Advertisements", "Educational videos", "Documentary editing", "Motion graphics"] %}
+      <span class="tag">{{ name }}</span>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2>Example Editor Profiles</h2>
+  <p class="muted small">These are fictional demo profiles for showing how the site works. They are not real people.</p>
+  {% if demo_editors %}
+    <div class="grid-3">
+      {% for profile in demo_editors %}
+        <article class="card editor-card">
+          <div class="editor-head">
+            <div class="avatar" aria-hidden="true">{{ profile.full_name[0] }}</div>
+            <div>
+              <h3>{{ profile.full_name }}</h3>
+              <span class="badge badge-demo">Demo profile</span>
+            </div>
+          </div>
+          <p class="small">{{ profile.bio }}</p>
+          <p class="small"><strong>Categories:</strong> {{ profile.categories or 'Not stated' }}</p>
+          <a class="btn btn-secondary btn-small" href="{{ url_for('editor_profile', profile_id=profile.id) }}">View Portfolio</a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No demo profiles yet. Run <code>python seed_demo.py</code> to add fictional examples.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

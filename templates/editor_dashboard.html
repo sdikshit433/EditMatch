@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, tag_list, price_text with context %}
+{% block title %}Editor Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-heading">
+  <div>
+    <h1>Welcome, {{ current_user.full_name }}</h1>
+    <p class="muted">Keep your profile up to date so clients can find you.</p>
+  </div>
+  <div class="button-row">
+    <a class="btn btn-secondary" href="{{ url_for('editor_profile', profile_id=profile.id) }}">Preview Portfolio</a>
+    <a class="btn" href="{{ url_for('editor_edit') }}">Edit Profile</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="match-header">
+    <div class="editor-head">
+      {% if profile.profile_photo %}
+        <img class="avatar-large" style="width:88px;height:88px;font-size:1.4rem" src="{{ url_for('static', filename=profile.profile_photo) }}" alt="Your profile photograph">
+      {% else %}
+        <div class="avatar" aria-hidden="true">{{ profile.full_name[0] }}</div>
+      {% endif %}
+      <div>
+        <h2 style="margin:0">{{ profile.full_name }}</h2>
+        <p class="muted small" style="margin:0">{{ profile.availability or 'Availability not stated' }} · {{ profile.experience_level or 'Experience not stated' }}</p>
+      </div>
+    </div>
+    <div style="min-width:220px">
+      <p class="small" style="margin-bottom:4px"><strong>Profile completion: {{ completion }}%</strong></p>
+      <div class="progress-track" role="progressbar" aria-valuenow="{{ completion }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill" style="width: {{ completion }}%"></div></div>
+      <p class="field-help">Add up to {{ max_samples }} portfolio samples to raise it.</p>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Specialities and pricing</h2>
+    <dl class="requirement-list">
+      <div><dt>Categories</dt><dd>{{ tag_list(profile.category_list) }}</dd></div>
+      <div><dt>Games</dt><dd>{{ tag_list(profile.game_list) }}</dd></div>
+      <div><dt>Techniques and effects</dt><dd>{{ tag_list(profile.skill_list) }}</dd></div>
+      <div><dt>Pricing</dt><dd>{{ price_text(profile.minimum_price, profile.maximum_price) }}{% if profile.pricing_model %} ({{ profile.pricing_model|lower }}){% endif %}</dd></div>
+      <div><dt>Typical delivery</dt><dd>{% if profile.delivery_hours %}{{ profile.delivery_hours }} hours{% else %}Not stated{% endif %}</dd></div>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>Public portfolio analysis</h2>
+    <p class="small"><strong>Status:</strong> {{ tinyfish_labels.get(profile.tinyfish_analysis_status, profile.tinyfish_analysis_status) }}</p>
+    {% if profile.portfolio_url %}
+      <p class="small"><strong>Page:</strong> <a href="{{ profile.portfolio_url }}" rel="noopener noreferrer" target="_blank">{{ profile.portfolio_url }}</a></p>
+    {% endif %}
+    {% if analysis %}
+      <p class="small muted">Extracted from your public page. Not verified by EditMatch.</p>
+      {% if analysis.project_titles %}<p class="small"><strong>Project titles:</strong> {{ analysis.project_titles|join(', ') }}</p>{% endif %}
+      {% if analysis.categories %}<p class="small"><strong>Categories stated:</strong> {{ analysis.categories|join(', ') }}</p>{% endif %}
+      {% if analysis.techniques %}<p class="small"><strong>Techniques mentioned:</strong> {{ analysis.techniques|join(', ') }}</p>{% endif %}
+      {% if analysis.price_information %}<p class="small"><strong>Public pricing:</strong> {{ analysis.price_information }}</p>{% endif %}
+      {% if analysis.evidence_summary %}<p class="small">{{ analysis.evidence_summary }}</p>{% endif %}
+    {% endif %}
+    {% if profile.portfolio_url %}
+      <form method="post" action="{{ url_for('editor_retry_analysis') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-secondary btn-small" data-loading-text="TinyFish is inspecting the page...">Retry Analysis</button>
+      </form>
+    {% else %}
+      <p class="small muted">Add a public portfolio URL on the edit page to use this.</p>
+    {% endif %}
+  </div>
+</div>
+
+<section style="margin-top:24px">
+  <h2>Portfolio samples</h2>
+  {% if profile.samples %}
+    <div class="grid-2">
+      {% for sample in profile.samples %}
+        <article class="card sample-card">
+          <h3>{{ sample.title }}</h3>
+          <p class="small muted">{{ sample.category }}{% if sample.game %} · {{ sample.game }}{% endif %}</p>
+          {% if sample.uploaded_video_path %}
+            <video controls preload="metadata" src="{{ url_for('static', filename=sample.uploaded_video_path) }}">Your browser cannot play this video format.</video>
+          {% elif sample.external_video_url %}
+            <a class="btn btn-secondary btn-small" href="{{ sample.external_video_url }}" rel="noopener noreferrer" target="_blank">Watch Sample</a>
+          {% else %}
+            <p class="small muted">No video attached.</p>
+          {% endif %}
+          <p class="small">{{ sample.description }}</p>
+          {{ tag_list(sample.tag_list) }}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No samples yet. Add your best work to get invitations.</p>
+      <a class="btn btn-small" href="{{ url_for('editor_edit') }}">Add samples</a>
+    </div>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Client invitations</h2>
+  {% set pending = invitations|selectattr('status', 'equalto', 'Pending')|list %}
+  {% set accepted = invitations|selectattr('status', 'equalto', 'Accepted')|list %}
+  {% set declined = invitations|selectattr('status', 'equalto', 'Declined')|list %}
+  {% if not invitations %}
+    <div class="empty-state"><p>No invitations yet. Clients can find you on the Browse Editors page.</p></div>
+  {% endif %}
+
+  {% for title, items in [('Pending', pending), ('Accepted', accepted), ('Declined', declined)] %}
+    {% if items %}
+      <h3>{{ title }} ({{ items|length }})</h3>
+      {% for invitation in items %}
+        <article class="card">
+          <div class="match-header">
+            <div>
+              <h3 style="margin-bottom:2px">{{ invitation.title }}</h3>
+              <p class="small muted">Invited on {{ invitation.created_at[:10] }}</p>
+            </div>
+            {{ status_badge(invitation.status) }}
+          </div>
+          <dl class="requirement-list">
+            <div><dt>Category and game</dt><dd>{{ invitation.category or 'Not specified' }}{% if invitation.game %} · {{ invitation.game }}{% endif %}</dd></div>
+            <div><dt>Budget</dt><dd>{{ price_text(invitation.minimum_budget, invitation.maximum_budget) }}</dd></div>
+            <div><dt>Deadline</dt><dd>{{ invitation.deadline or 'Not specified' }}</dd></div>
+            <div><dt>Required techniques</dt><dd>{{ invitation.effects_list|join(', ') or 'Not specified' }}</dd></div>
+            <div><dt>Client</dt><dd>{{ invitation.client_name }}{% if invitation.client_email %} · {{ invitation.client_email }}{% endif %}</dd></div>
+          </dl>
+          <p class="small"><strong>Client's requirements:</strong> {{ invitation.raw_description }}</p>
+          {% if invitation.status == 'Pending' %}
+            <div class="button-row">
+              <form method="post" action="{{ url_for('respond_to_invitation', invitation_id=invitation.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" name="decision" value="Accepted" class="btn" data-loading-text="Accepting...">Accept</button>
+              </form>
+              <form method="post" action="{{ url_for('respond_to_invitation', invitation_id=invitation.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" name="decision" value="Declined" class="btn btn-secondary">Decline</button>
+              </form>
+            </div>
+          {% endif %}
+        </article>
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+</section>
+
+<section>
+  <h2>Recent TinyFish activity</h2>
+  {% if runs %}
+    <div class="table-wrap">
+      <table class="simple">
+        <thead><tr><th>When</th><th>Source</th><th>Status</th><th>Message</th></tr></thead>
+        <tbody>
+          {% for run in runs %}
+            <tr>
+              <td>{{ run.created_at[:16] }}</td>
+              <td class="small"><a href="{{ run.source_url }}" rel="noopener noreferrer" target="_blank">{{ run.source_url }}</a>{% if run.run_id %}<br><span class="muted">Run ID: {{ run.run_id }}</span>{% endif %}</td>
+              <td>{{ status_badge(run.status) }}</td>
+              <td class="small">{{ run.message }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted small">No TinyFish requests have been made yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

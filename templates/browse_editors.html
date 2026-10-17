@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tag_list, price_text, invite_form with context %}
+{% block title %}Browse Editors{% endblock %}
+{% block content %}
+
+<div class="page-heading">
+  <div>
+    <h1>Browse Editors</h1>
+    <p class="muted">Editors who have created a profile on EditMatch.</p>
+  </div>
+</div>
+
+<form method="get" action="{{ url_for('browse_editors') }}" class="card card-soft" role="search">
+  <div class="form-grid">
+    <div class="field">
+      <label for="q">Search</label>
+      <input id="q" name="q" type="search" maxlength="100" value="{{ filters.q }}" placeholder="Name, game, technique, or description">
+    </div>
+    <div class="field">
+      <label for="category">Category</label>
+      <select id="category" name="category">
+        <option value="">Any category</option>
+        {% for option in category_options %}<option value="{{ option }}" {% if filters.category == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="game">Game</label>
+      <select id="game" name="game">
+        <option value="">Any game</option>
+        {% for option in game_options %}<option value="{{ option }}" {% if filters.game == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="technique">Editing technique</label>
+      <select id="technique" name="technique">
+        <option value="">Any technique</option>
+        {% for option in technique_options %}<option value="{{ option }}" {% if filters.technique == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="max_price">Maximum starting price (₹)</label>
+      <input id="max_price" name="max_price" type="number" min="0" value="{{ filters.max_price or '' }}">
+    </div>
+    <div class="field">
+      <label for="availability">Availability</label>
+      <select id="availability" name="availability">
+        <option value="">Any</option>
+        {% for option in availability_options %}<option value="{{ option }}" {% if filters.availability == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="button-row">
+    <button type="submit" class="btn">Apply filters</button>
+    {% if any_filter %}<a class="btn btn-secondary" href="{{ url_for('browse_editors') }}">Clear</a>{% endif %}
+  </div>
+</form>
+
+<p class="muted small" aria-live="polite">{{ profiles|length }} editor{{ '' if profiles|length == 1 else 's' }} found.</p>
+
+{% if profiles %}
+  <div class="grid-3">
+    {% for profile in profiles %}
+      <article class="card editor-card">
+        <div class="editor-head">
+          {% if profile.profile_photo %}
+            <img class="avatar" src="{{ url_for('static', filename=profile.profile_photo) }}" alt="">
+          {% else %}
+            <div class="avatar" aria-hidden="true">{{ profile.full_name[0] }}</div>
+          {% endif %}
+          <div>
+            <h3>{{ profile.full_name }}</h3>
+            {% if profile.is_demo %}<span class="badge badge-demo">Demo profile</span>{% endif %}
+            <p class="small muted" style="margin:0">{{ profile.availability or 'Availability not stated' }}</p>
+          </div>
+        </div>
+        <p class="small">{{ profile.bio }}</p>
+        <p class="small"><strong>Specialities:</strong> {{ profile.categories or 'Not stated' }}</p>
+        {% if profile.game_list %}<p class="small"><strong>Games:</strong> {{ profile.games }}</p>{% endif %}
+        {% if profile.samples %}
+          <p class="small"><strong>Sample projects:</strong></p>
+          <ul class="list-plain small">
+            {% for sample in profile.samples[:3] %}<li>{{ sample.title }}</li>{% endfor %}
+          </ul>
+        {% else %}
+          <p class="small muted">No samples uploaded yet.</p>
+        {% endif %}
+        <p class="price small">{{ price_text(profile.minimum_price, profile.maximum_price) }}</p>
+        <p class="small muted">Profile completion: {{ profile.samples|length }} of 5 samples added</p>
+        <div class="button-row">
+          <a class="btn btn-secondary btn-small" href="{{ url_for('editor_profile', profile_id=profile.id) }}">View Portfolio</a>
+        </div>
+        {{ invite_form(profile.id, client_jobs, url_for('browse_editors')) }}
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <h2>No editors match these filters</h2>
+    <p class="muted">Try removing a filter or searching for a shorter word.</p>
+    {% if any_filter %}<a class="btn btn-secondary" href="{{ url_for('browse_editors') }}">Clear filters</a>{% endif %}
+  </div>
+{% endif %}
+{% endblock %}

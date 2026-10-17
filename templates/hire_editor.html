@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Find My Editor{% endblock %}
+{% block content %}
+
+<div class="page-heading">
+  <div>
+    <h1>Describe your video project</h1>
+    <p class="muted">Write in your own words, then fill in the details. Fields marked * are required.</p>
+  </div>
+  <a class="btn btn-secondary btn-small" href="{{ url_for('client_dashboard') }}">Back to dashboard</a>
+</div>
+
+{% if errors %}
+  <div class="error-box" role="alert">
+    <strong>Please fix these problems:</strong>
+    <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<form method="post" action="{{ url_for('hire_editor') }}" enctype="multipart/form-data" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <fieldset class="form-section">
+    <legend>1. Basic project information</legend>
+    <div class="form-grid">
+      <div class="field">
+        <label for="title" class="required">Project title</label>
+        <input id="title" name="title" type="text" maxlength="120" value="{{ values.get('title', '') }}" required>
+      </div>
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">Choose, or describe it below</option>
+          {% for option in category_options %}
+            <option value="{{ option }}" {% if values.get('category') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="game">Game <span class="optional">(if relevant)</span></label>
+        <input id="game" name="game" type="text" maxlength="60" list="hire-games" value="{{ values.get('game', '') }}">
+        <datalist id="hire-games">{% for option in game_options %}<option value="{{ option }}"></option>{% endfor %}</datalist>
+      </div>
+      <div class="field">
+        <label for="platform">Platform</label>
+        <select id="platform" name="platform">
+          <option value="">Not specified</option>
+          {% for option in platform_options %}
+            <option value="{{ option }}" {% if values.get('platform') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="video_type">Video type</label>
+        <select id="video_type" name="video_type">
+          <option value="">Not specified</option>
+          {% for option in video_type_options %}
+            <option value="{{ option }}" {% if values.get('video_type') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="audience">Intended audience <span class="optional">(optional)</span></label>
+        <input id="audience" name="audience" type="text" maxlength="120" value="{{ values.get('audience', '') }}" placeholder="for example gamers aged 16 to 24">
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend>2. Describe the edit</legend>
+    <div class="field">
+      <label for="description" class="required">Project description</label>
+      <textarea id="description" name="description" rows="6" maxlength="3000" required placeholder="Describe exactly what you want. For example: I need a Fortnite montage under ₹2,000. I want velocity editing, fast beat sync, smooth transitions, cinematic colour grading, sound effects, and a short voiceover. The final video should be around 60 seconds and should be delivered in 48 hours.">{{ values.get('description', '') }}</textarea>
+    </div>
+    <p class="field-help">Example prompts. Click one to fill the box, then edit it as you like:</p>
+    <div class="example-chips">
+      {% for prompt in example_prompts %}
+        <button type="button" class="example-chip" data-fill-target="description" data-fill-text="{{ prompt }}">{{ prompt }}</button>
+      {% endfor %}
+    </div>
+    <div class="button-row" style="margin-top:16px">
+      <button type="submit" name="action" value="understand" class="btn btn-secondary" data-loading-text="Reading your description...">Understand My Requirements</button>
+    </div>
+    <p class="field-help">This reads your description with simple keyword rules. It does not replace the fields below, and you can correct its results.</p>
+  </fieldset>
+
+  {% if parsed is not none or pointers.values()|select|list %}
+  <fieldset class="form-section">
+    <legend>3. Requirements we understood (editable)</legend>
+    <p class="field-help">These come from your description. Anything you change here is used as your choice. A value you pick in the fields elsewhere on this form takes priority. Leave a field blank if it does not apply.</p>
+    <div class="form-grid">
+      <div class="field"><label for="pointer_game">Game</label><input id="pointer_game" name="pointer_game" type="text" value="{{ pointers.get('game', '') }}"></div>
+      <div class="field"><label for="pointer_category">Category</label><input id="pointer_category" name="pointer_category" type="text" value="{{ pointers.get('category', '') }}"></div>
+      <div class="field"><label for="pointer_platform">Platform</label><input id="pointer_platform" name="pointer_platform" type="text" value="{{ pointers.get('platform', '') }}"></div>
+      <div class="field"><label for="pointer_effects">Editing styles and effects</label><input id="pointer_effects" name="pointer_effects" type="text" value="{{ pointers.get('effects', '') }}" placeholder="comma-separated"></div>
+      <div class="field"><label for="pointer_voiceover">Voiceover</label><input id="pointer_voiceover" name="pointer_voiceover" type="text" value="{{ pointers.get('voiceover', '') }}" placeholder="Yes or No"></div>
+      <div class="field"><label for="pointer_subtitles">Subtitles</label><input id="pointer_subtitles" name="pointer_subtitles" type="text" value="{{ pointers.get('subtitles', '') }}" placeholder="Yes or No"></div>
+      <div class="field"><label for="pointer_duration_seconds">Duration (seconds)</label><input id="pointer_duration_seconds" name="pointer_duration_seconds" type="text" value="{{ pointers.get('duration_seconds', '') }}"></div>
+      <div class="field"><label for="pointer_budget_min">Minimum budget (₹)</label><input id="pointer_budget_min" name="pointer_budget_min" type="text" value="{{ pointers.get('budget_min', '') }}"></div>
+      <div class="field"><label for="pointer_budget_max">Maximum budget (₹)</label><input id="pointer_budget_max" name="pointer_budget_max" type="text" value="{{ pointers.get('budget_max', '') }}"></div>
+      <div class="field"><label for="pointer_aspect_ratio">Aspect ratio</label><input id="pointer_aspect_ratio" name="pointer_aspect_ratio" type="text" value="{{ pointers.get('aspect_ratio', '') }}" placeholder="16:9, 9:16 or 1:1"></div>
+      <div class="field"><label for="pointer_delivery_hours">Delivery time (hours)</label><input id="pointer_delivery_hours" name="pointer_delivery_hours" type="text" value="{{ pointers.get('delivery_hours', '') }}"></div>
+    </div>
+  </fieldset>
+  {% endif %}
+
+  <fieldset class="form-section">
+    <legend>4. Structured requirements</legend>
+    <div class="form-grid">
+      <div class="field">
+        <label for="budget_min">Minimum budget (₹)</label>
+        <input id="budget_min" name="budget_min" type="number" min="0" value="{{ values.get('budget_min', '') }}">
+      </div>
+      <div class="field">
+        <label for="budget_max">Maximum budget (₹)</label>
+        <input id="budget_max" name="budget_max" type="number" min="0" value="{{ values.get('budget_max', '') }}">
+        <p class="field-help">Required. You can also write it in the description, such as "under ₹2,000".</p>
+      </div>
+      <div class="field">
+        <label for="deadline">Deadline</label>
+        <input id="deadline" name="deadline" type="date" value="{{ values.get('deadline', '') }}">
+      </div>
+      <div class="field">
+        <label for="delivery_hours">Preferred delivery time</label>
+        <select id="delivery_hours" name="delivery_hours">
+          <option value="">Not specified</option>
+          {% for label, hours in delivery_options.items() %}
+            <option value="{{ hours }}" {% if values.get('delivery_hours') == hours|string %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="duration_seconds">Desired finished video length (seconds)</label>
+        <input id="duration_seconds" name="duration_seconds" type="number" min="1" max="3600" value="{{ values.get('duration_seconds', '') }}">
+      </div>
+      <div class="field">
+        <label for="aspect_ratio">Aspect ratio</label>
+        <select id="aspect_ratio" name="aspect_ratio">
+          <option value="">Not specified</option>
+          {% for option in aspect_options %}
+            <option value="{{ option }}" {% if values.get('aspect_ratio') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="voiceover">Voiceover</label>
+        <select id="voiceover" name="voiceover">
+          <option value="">Not specified</option>
+          {% for option in voiceover_options %}
+            <option value="{{ option }}" {% if values.get('voiceover') == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="subtitles">Subtitles</label>
+        <select id="subtitles" name="subtitles">
+          <option value="">Not specified</option>
+          <option value="Yes" {% if values.get('subtitles') == 'Yes' %}selected{% endif %}>Yes</option>
+          <option value="No" {% if values.get('subtitles') == 'No' %}selected{% endif %}>No</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="revisions">Number of revisions expected</label>
+        <input id="revisions" name="revisions" type="number" min="0" max="20" value="{{ values.get('revisions', '') }}">
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">Editing techniques required</span>
+      <div class="choice-group">
+        {% for option in technique_options %}
+          <label class="chip"><input type="checkbox" name="effects" value="{{ option }}" {% if option in values.get('effects', []) %}checked{% endif %}> {{ option }}</label>
+        {% endfor %}
+      </div>
+    </div>
+    <label class="inline-check"><input type="checkbox" name="music_sync" value="1" {% if values.get('music_sync') %}checked{% endif %}> Music or beat synchronisation is required</label>
+    <div class="field" style="margin-top:14px">
+      <label for="additional_instructions">Additional instructions <span class="optional">(optional)</span></label>
+      <textarea id="additional_instructions" name="additional_instructions" maxlength="1000">{{ values.get('additional_instructions', '') }}</textarea>
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend>5. References <span class="optional">(optional)</span></legend>
+    <div class="form-grid">
+      <div class="field">
+        <label for="reference_url">Public reference link</label>
+        <input id="reference_url" name="reference_url" type="url" maxlength="500" value="{{ values.get('reference_url', '') }}" placeholder="https://">
+        <p class="field-help">A public page that shows the style you like. TinyFish reads only the visible text on it.</p>
+      </div>
+      <div class="field">
+        <label for="reference_file">Reference image or video</label>
+        <input id="reference_file" name="reference_file" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime">
+        <p class="file-names" id="reference_file-names"></p>
+        <p class="field-help">Up to {{ video_limit_mb }} MB.</p>
+      </div>
+    </div>
+    {% if not tinyfish_configured %}<p class="field-help">TinyFish is not configured, so a reference link will be saved without being read.</p>{% endif %}
+  </fieldset>
+
+  <div class="button-row">
+    <button type="submit" name="action" value="submit" class="btn btn-large" data-loading-text="Finding editors...">Find My Editors</button>
+    <a class="btn btn-secondary" href="{{ url_for('client_dashboard') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

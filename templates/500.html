@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong{% endblock %}
+{% block content %}
+<div class="empty-state">
+  <h1>Something went wrong</h1>
+  <p class="muted">The problem has been logged on the server. Your saved information has not been changed. Please try again.</p>
+  <a class="btn" href="{{ url_for('index') }}">Go to the home page</a>
+</div>
+{% endblock %}
